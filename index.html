@@ -14,5 +14,48 @@
 <!-- Change this code here by copy and pasting your template on line 15 -->
 <p>Hello World! I’m [username]. This is my website!</p>
 
+<button onclick="getGasPrices()">Get Local Gas Prices</button>
+<pre id="gas-results"></pre>
+
+<script>
+async function getGasPrices() {
+  const output = document.getElementById('gas-results');
+  output.textContent = 'Obtaining location...';
+  if (!navigator.geolocation) {
+    output.textContent = 'Geolocation is not supported by this browser.';
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const { latitude, longitude } = pos.coords;
+    output.textContent = 'Determining state...';
+    try {
+      const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+      const geoData = await geoRes.json();
+      const stateCode = (geoData.address && (geoData.address.state_code || geoData.address.state)) || '';
+
+      if (!stateCode) {
+        output.textContent = 'Could not determine state from coordinates.';
+        return;
+      }
+
+      output.textContent = 'Fetching gas prices...';
+      const gasRes = await fetch(`https://api.collectapi.com/gasPrice/stateUsaPrice?state=${stateCode}`, {
+        headers: {
+          'content-type': 'application/json',
+          'authorization': 'apikey YOUR_API_KEY_HERE'
+        }
+      });
+      const gasData = await gasRes.json();
+      output.textContent = JSON.stringify(gasData, null, 2);
+    } catch (e) {
+      output.textContent = 'Error retrieving data: ' + e;
+    }
+  }, (err) => {
+    output.textContent = 'Unable to get location: ' + err.message;
+  });
+}
+</script>
+
 </body>
 </html>
